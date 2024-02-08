@@ -45,6 +45,7 @@ CREATE TABLE users (
   }
 })();
 
+/*
 const insertUser = async (
   username: string,
   email: string,
@@ -63,6 +64,30 @@ const insertUser = async (
     await client.end();
   }
 };
+*/
+
+/*
+const insertAddress = async (
+  userId: number,
+  city: string,
+  country: string,
+  street: string,
+  pincode: string,
+) => {
+  try {
+    await client.connect();
+    const query = `INSERT INTO addresses (user_id, city, country, street, pincode) VALUES ($1, $2, $3, $4, $5)`;
+    const values = [userId, city, country, street, pincode];
+    const res = await client.query(query, values);
+    console.log(`Successfully inserted address: ${res}`);
+  } catch (e) {
+    console.error(`Error in inserting address: ${e}`);
+    throw e;
+  } finally {
+    await client.end();
+  }
+};
+*/
 
 const getUser = async (email: string) => {
   try {
@@ -75,6 +100,52 @@ const getUser = async (email: string) => {
       : (console.log("No user found with the given email."), null);
   } catch (e) {
     console.error(`Error in fetching data: ${e}`);
+    throw e;
+  } finally {
+    await client.end();
+  }
+};
+
+const getAddress = async (userId: number) => {
+  try {
+    await client.connect();
+    const query = `SELECT * FROM addresses WHERE user_id = $1`;
+    const values = [userId];
+    const result = await client.query(query, values);
+    return result.rows.length > 0
+      ? (console.log("Address found:", result.rows[0]), result.rows[0])
+      : (console.log("No address found with the given user ID."), null);
+  } catch (e) {
+    console.error(`Error in fetching address: ${e}`);
+    throw e;
+  } finally {
+    await client.end();
+  }
+};
+
+const insertUserAndAddress = async (
+  username: string,
+  email: string,
+  password: string,
+  city: string,
+  country: string,
+  street: string,
+  pincode: string,
+) => {
+  try {
+    await client.connect();
+    await client.query(`BEGIN;`);
+    const userQuery = `INSERT INTO users (username, email, password) VALUES ($1, $2, $3) RETURNING id;`;
+    const userValues = [username, email, password];
+    const userRes = await client.query(userQuery, userValues);
+    const userId = userRes.rows[0].id;
+    const addressQuery = `INSERT INTO addresses (user_id, city, country, street, pincode) VALUES ($1, $2, $3, $4, $5)`;
+    const values = [userId, city, country, street, pincode];
+    const addressRes = await client.query(addressQuery, values);
+    await client.query(`COMMIT;`);
+    console.log(`Successfully inserted data: ${userRes}, ${addressRes}`);
+  } catch (e) {
+    console.error(`Error in inserting data: ${e}`);
     throw e;
   } finally {
     await client.end();
