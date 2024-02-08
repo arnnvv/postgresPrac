@@ -155,15 +155,22 @@ const getData = async (email: string) => {
   let address;
   try {
     await client.connect();
-    const userQuery = `SELECT * FROM users WHERE email = $1`;
-    const userValues = [email];
-    const userRes = await client.query(userQuery, userValues);
-    user = userRes.rows.length > 0 ? userRes.rows[0] : null;
-    if (user) {
-      const addressQuery = `SELECT * FROM addresses WHERE user_id = $1`;
-      const addressValues = [user.id];
-      const addressRes = await client.query(addressQuery, addressValues);
-      address = addressRes.rows.length > 0 ? addressRes.rows[0] : null;
+    const query = `SELECT u.*, a.*
+FROM users u
+LEFT JOIN addresses a ON u.id = a.user_id
+WHERE u.email = $1`;
+    const values = [email];
+    const result = await client.query(query, values);
+    if (result.rows.length > 0) {
+      user = result.rows[0];
+      address = result.rows
+        .map((row) => ({
+          city: row.city,
+          country: row.country,
+          street: row.street,
+          pincode: row.pincode,
+        }))
+        .filter((addr) => addr.city);
     }
     console.log(`Successfully fetched data: ${user}, ${address}`);
     return { user, address };
