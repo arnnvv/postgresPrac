@@ -1,7 +1,7 @@
 import { Client } from "pg";
 
 const client = new Client({
-  connectionString: `postgresql://arnnvv:byhY0MAEzS7a@ep-shiny-feather-20561110.us-east-2.aws.neon.tech/test?sslmode=require`,
+  connectionString: process.env.DATABASE_URL,
 });
 
 (async () => {
@@ -64,9 +64,7 @@ const insertUser = async (
     await client.end();
   }
 };
-*/
 
-/*
 const insertAddress = async (
   userId: number,
   city: string,
@@ -87,7 +85,6 @@ const insertAddress = async (
     await client.end();
   }
 };
-*/
 
 const getUser = async (email: string) => {
   try {
@@ -122,8 +119,9 @@ const getAddress = async (userId: number) => {
     await client.end();
   }
 };
+*/
 
-const insertUserAndAddress = async (
+const insertData = async (
   username: string,
   email: string,
   password: string,
@@ -146,6 +144,31 @@ const insertUserAndAddress = async (
     console.log(`Successfully inserted data: ${userRes}, ${addressRes}`);
   } catch (e) {
     console.error(`Error in inserting data: ${e}`);
+    throw e;
+  } finally {
+    await client.end();
+  }
+};
+
+const getData = async (email: string) => {
+  let user;
+  let address;
+  try {
+    await client.connect();
+    const userQuery = `SELECT * FROM users WHERE email = $1`;
+    const userValues = [email];
+    const userRes = await client.query(userQuery, userValues);
+    user = userRes.rows.length > 0 ? userRes.rows[0] : null;
+    if (user) {
+      const addressQuery = `SELECT * FROM addresses WHERE user_id = $1`;
+      const addressValues = [user.id];
+      const addressRes = await client.query(addressQuery, addressValues);
+      address = addressRes.rows.length > 0 ? addressRes.rows[0] : null;
+    }
+    console.log(`Successfully fetched data: ${user}, ${address}`);
+    return { user, address };
+  } catch (e) {
+    console.error(`Error in fetching data: ${e}`);
     throw e;
   } finally {
     await client.end();
